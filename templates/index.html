@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Drosophila Rhythmic Genes</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial; max-width: 1000px; margin: auto }
+        .chart-container { position: relative; height:400px; width:800px; margin-top: 20px }
+    </style>
+</head>
+<body>
+    <h1>Drosophila Rhythmic Genes</h1>
+    <form id="searchForm">
+        <input type="text" id="geneInput" value="FBgn0003068" placeholder="Enter gene IDs, separated by comma (up to 100)">
+        <button type="submit">Search</button>
+    </form>
+
+    <p>
+        <a href="/data/T18DD.d4d5.fpkm.csv">Download</a>
+    </p>
+
+    <div id="charts"></div>
+
+    <script>
+        const colors = {
+            "T25LD": "#FFA500",
+            "T18DD": "#0000FF",
+            "T25DD": "#008000",
+            "T29DD": "#FF0000"
+        };
+
+        function fetchDataAndDrawCharts(gene_ids) {
+            fetch(`/gene?gene_ids=${encodeURIComponent(gene_ids)}`)
+                .then(res => res.json())
+                .then(data => {
+                    const chartsDiv = document.getElementById("charts");
+                    chartsDiv.innerHTML = "";
+
+                    data.forEach(gene => {
+                        const canvas = document.createElement("canvas");
+                        canvas.id = `chart-${gene.gene_id}`;
+                        canvas.width = 800;
+                        canvas.height = 400;
+
+                        const datasets = [];
+
+                        for (const [sample, values] of Object.entries(gene.expression)) {
+                            const color = colors[sample];
+                            datasets.push({
+                                label: `${sample} Replicates Area`,
+                                data: values.time_points.map((t, i) => ({x: t, y: values.rep1[i]})),
+                                borderColor: 'rgba(0,0,0,0)',
+                                backgroundColor: `${color}66`,
+                                pointRadius: 0,
+                                type: 'line',
+                                fill: {
+                                    target: {
+                                        fill: 'start',
+                                        above: `${color}44`
+                                    },
+                                    below: `${color}22`
+                                }
+                            }, {
+                                label: `${sample} Mean Line`,
+                                data: values.time_points.map((t, i) => ({x: t, y: values.mean[i]})),
+                                borderColor: color,
+                                backgroundColor: 'transparent',
+                                tension: 0.2,
+                                borderWidth: 2
+                            });
+                        }
+
+                        new Chart(canvas.getContext("2d"), {
+                            type: 'line',
+                            data: { datasets },
+                            options: {
+                                responsive: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: `${gene.gene_id} - ${gene.gene_name}`
+                                    }
+                                },
+                                scales: {
+                                    x: {
+                                        type: 'linear',
+                                        title: { display: true, text: 'Time (hours)' }
+                                    },
+                                    y: {
+                                        title: { display: true, text: 'FPKM' }
+                                    }
+                                }
+                            }
+                        });
+
+                        chartsDiv.appendChild(canvas);
+                    }
+                });
+        }
+
+        document.getElementById("searchForm").addEventListener("submit", e => {
+            e.preventDefault();
+            const input = document.getElementById("geneInput").value;
+            fetchDataAndDrawCharts(input);
+        });
+
+        // 默认加载一次
+        window.onload = () => fetchDataAndDrawCharts("FBgn0003068");
+    </script>
+</body>
+</html>

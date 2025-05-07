@@ -1,0 +1,8 @@
+gunicorn==22.0.0
+Flask==3.0.0
+flask-sqlalchemy==3.1.1
+flask-limiter==3.1.0
+requests==2.31.0
+lmdb==1.4.2
+pandas==2.2.0
+python-dotenv==1.0.1
