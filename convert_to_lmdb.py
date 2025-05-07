@@ -12,7 +12,7 @@ def parse_timepoint_columns(header):
     timepoints = []
     for col in header[1:]:
         if "." in col:
-            tp, rep = col.split(".")
+            _, _, tp, rep = col.split(".")
             timepoints.append(int(tp))
     return sorted(set(timepoints))
 
