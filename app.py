@@ -62,8 +62,13 @@ def track_visitor():
 # 请求频率限制
 # --------------------------
 from flask_limiter import Limiter
-limiter = Limiter(app=app, key_func=lambda: request.remote_addr)
-limiter.default_rate_limit("10/minute")
+from flask_limiter.util import get_remote_address
+# 创建 limiter 实例，指定 key_func 为 IP 地址
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,      # 按客户端 IP 做限制
+    default_limits=["200 per day", "100 per hour"]  # 可选全局限制
+)
 
 # --------------------------
 # JSON API 接口
