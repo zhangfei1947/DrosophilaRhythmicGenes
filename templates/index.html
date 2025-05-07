@@ -3,27 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <title>Drosophila Rhythmic Genes</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3"></script>
     <style>
-        body { font-family: Arial; max-width: 1000px; margin: auto }
-        .chart-container { position: relative; height:400px; width:800px; margin-top: 20px }
+        body {
+            font-family: Arial, sans-serif;
+            margin: auto;
+            max-width: 1000px;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        form {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            font-size: 16px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+        }
+        .chart-container {
+            margin-top: 40px;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin-bottom: 40px;
+        }
+        p.links {
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
+
     <h1>Drosophila Rhythmic Genes</h1>
+
     <form id="searchForm">
-        <input type="text" id="geneInput" value="FBgn0003068" placeholder="Enter gene IDs, separated by comma (up to 100)">
+        <input type="text" id="geneInput"
+               placeholder="Enter gene IDs, separated by comma (up to 100)"
+               value="FBgn0003068">
         <button type="submit">Search</button>
     </form>
 
-    <p>
-        <a href="/data/T18DD.d4d5.fpkm.csv">Download</a>
+    <p class="links">
+        Download samples:
+        <a href="/download/T25LD.d4d5.fpkm.csv">T25LD File</a> |
+        <a href="/download/T18DD.d4d5.fpkm.csv">T18DD File</a> |
+        <a href="/download/T25DD.d4d5.fpkm.csv">T25DD File</a> |
+        <a href="/download/T29DD.d4d5.fpkm.csv">T29DD File</a>
     </p>
 
-    <div id="charts"></div>
+    <div class="chart-container" id="charts"></div>
 
     <script>
-        const colors = {
+        const sampleColors = {
             "T25LD": "#FFA500",
             "T18DD": "#0000FF",
             "T25DD": "#008000",
@@ -37,31 +76,43 @@
                     const chartsDiv = document.getElementById("charts");
                     chartsDiv.innerHTML = "";
 
+                    if (!data.length) {
+                        chartsDiv.innerHTML = "<p>No data found for the given gene ID(s).</p>";
+                        return;
+                    }
+
                     data.forEach(gene => {
                         const canvas = document.createElement("canvas");
-                        canvas.id = `chart-${gene.gene_id}`;
-                        canvas.width = 800;
                         canvas.height = 400;
+                        canvas.width = 800;
+                        chartsDiv.appendChild(canvas);
+
+                        const ctx = canvas.getContext("2d");
 
                         const datasets = [];
 
                         for (const [sample, values] of Object.entries(gene.expression)) {
-                            const color = colors[sample];
+                            const color = sampleColors[sample];
+
+                            // 浅色区域：rep1 和 rep2（上下填充）
                             datasets.push({
-                                label: `${sample} Replicates Area`,
+                                label: `${sample} Rep1 Shadow`,
                                 data: values.time_points.map((t, i) => ({x: t, y: values.rep1[i]})),
-                                borderColor: 'rgba(0,0,0,0)',
-                                backgroundColor: `${color}66`,
+                                borderColor: 'transparent',
+                                backgroundColor: `${color}44`,
                                 pointRadius: 0,
-                                type: 'line',
-                                fill: {
-                                    target: {
-                                        fill: 'start',
-                                        above: `${color}44`
-                                    },
-                                    below: `${color}22`
-                                }
+                                fill: 'origin'
                             }, {
+                                label: `${sample} Rep2 Shadow`,
+                                data: values.time_points.map((t, i) => ({x: t, y: values.rep2[i]})),
+                                borderColor: 'transparent',
+                                backgroundColor: `${color}44`,
+                                pointRadius: 0,
+                                fill: 'end'
+                            });
+
+                            // Mean 折线
+                            datasets.push({
                                 label: `${sample} Mean Line`,
                                 data: values.time_points.map((t, i) => ({x: t, y: values.mean[i]})),
                                 borderColor: color,
@@ -71,7 +122,7 @@
                             });
                         }
 
-                        new Chart(canvas.getContext("2d"), {
+                        new Chart(ctx, {
                             type: 'line',
                             data: { datasets },
                             options: {
@@ -80,11 +131,19 @@
                                     title: {
                                         display: true,
                                         text: `${gene.gene_id} - ${gene.gene_name}`
+                                    },
+                                    legend: {
+                                        display: true,
+                                        labels: {
+                                            filter: (item) => !item.text.includes("Shadow")
+                                        }
                                     }
                                 },
                                 scales: {
                                     x: {
                                         type: 'linear',
+                                        min: 0,
+                                        max: 44,
                                         title: { display: true, text: 'Time (hours)' }
                                     },
                                     y: {
@@ -93,9 +152,11 @@
                                 }
                             }
                         });
-
-                        chartsDiv.appendChild(canvas);
-                    }
+                    });
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Error fetching data.");
                 });
         }
 
@@ -105,8 +166,8 @@
             fetchDataAndDrawCharts(input);
         });
 
-        // 默认加载一次
         window.onload = () => fetchDataAndDrawCharts("FBgn0003068");
     </script>
+
 </body>
 </html>
