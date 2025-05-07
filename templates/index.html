@@ -52,11 +52,7 @@
     </form>
 
     <p class="links">
-        Download samples:
-        <a href="/download/T25LD.d4d5.fpkm.csv">T25LD File</a> |
-        <a href="/download/T18DD.d4d5.fpkm.csv">T18DD File</a> |
-        <a href="/download/T25DD.d4d5.fpkm.csv">T25DD File</a> |
-        <a href="/download/T29DD.d4d5.fpkm.csv">T29DD File</a>
+        <a href="/download/GeneExpressionData.zip">Download All Data</a>
     </p>
 
     <div class="chart-container" id="charts"></div>
@@ -137,6 +133,9 @@
                                         labels: {
                                             filter: (item) => !item.text.includes("Shadow")
                                         }
+                                    },
+                                    background: {
+                                        color: 'white'
                                     }
                                 },
                                 scales: {
