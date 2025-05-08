@@ -51,7 +51,7 @@
         }
         p.links {
             margin: 20px 0;
-            text-align: center;
+            text-align: left;
         }
         .download-btn {
             display: inline-block;
@@ -186,6 +186,10 @@
                                             filter: (item) => item.text.includes("Mean")
                                         }
                                     }
+                                },
+                                backgroundColor: 'white',  // 设置整个图表背景
+                                layout: {
+                                    padding: 10
                                 },
                                 scales: {
                                     x: {
