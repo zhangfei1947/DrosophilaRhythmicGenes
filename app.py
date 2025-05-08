@@ -31,9 +31,6 @@ lmdb_envs = {
     for sample in SAMPLES
 }
 
-@app.before_request
-def before_request():
-    request.environ['REMOTE_ADDR'] = request.headers.get('X-Forwarded-For', request.remote_addr)
 
 # --------------------------
 # 访客记录 (SQLite)
@@ -52,19 +49,35 @@ class Visitor(db.Model):
 
 @app.before_request
 def track_visitor():
+    # 只记录 /gene 路由的请求
     if request.endpoint == 'get_gene_expr':
-        ip = request.remote_addr
+        # 获取真实 IP：优先使用 X-Forwarded-For
+        x_forwarded_for = request.headers.get('X-Forwarded-For')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0].strip()  # 第一个 IP 是客户端的真实 IP
+        else:
+            ip = request.remote_addr  # 回退到 remote_addr（本地开发用）
+
         query = request.args.get('gene_ids', '')
         
+        # 获取国家（带异常处理）
+        country = "Unknown"
         try:
             res = requests.get(f'https://ipapi.co/{ip}/json/', timeout=2).json()
             country = res.get('country_name', 'Unknown')
-        except:
+        except Exception as e:
+            print("Error fetching country:", e)
             country = 'Unknown'
 
-        visitor = Visitor(ip=ip, country=country, query=query)
-        db.session.add(visitor)
-        db.session.commit()
+        # 存入数据库
+        try:
+            visitor = Visitor(ip=ip, country=country, query=query)
+            db.session.add(visitor)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print("Database error:", e)
+
 
 # --------------------------
 # 请求频率限制
