@@ -56,7 +56,7 @@ def track_visitor():
         if x_forwarded_for:
             ip = x_forwarded_for.split(',')[0].strip()  # 第一个 IP 是客户端的真实 IP
         else:
-            ip = request.remote_addr  # 回退到 remote_addr（本地开发用）
+            ip = request.remote_addr  
 
         query = request.args.get('gene_ids', '')
         
