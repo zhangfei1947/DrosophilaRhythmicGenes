@@ -101,10 +101,10 @@
 
     <script>
         const sampleColors = {
-            "T25LD": "#FFA500", // orange
-            "T18DD": "#0000FF", // blue
-            "T25DD": "#008000", // green
-            "T29DD": "#FF0000"  // red
+            "T25LD": "#ff7f0e", // orange
+            "T18DD": "#1f77b4", // blue
+            "T25DD": "#2ca02c", // green
+            "T29DD": "#d62728"  // red
         };
 
         function fetchDataAndDrawCharts(gene_ids) {
@@ -181,8 +181,15 @@
                                 borderColor: color,
                                 backgroundColor: 'transparent',
                                 borderWidth: 2,
-                                pointRadius: 3,
-                                pointBorderWidth: 4
+                                pointRadius: 4,                // 设置点的大小
+                                pointBackgroundColor: color,   // 点的填充颜色
+                                pointBorderColor: 'white',     // 点的边框颜色
+                                pointBorderWidth: 0.5,         // 点的边框宽度
+                                pointHoverRadius: 6,           // 鼠标悬停时点的大小
+                                pointHoverBackgroundColor: color,
+                                pointHoverBorderColor: 'white',
+                                pointHoverBorderWidth: 2
+
                             });
                         }
 
@@ -195,7 +202,12 @@
                                 responsive: false,
                                 plugins: {
                                     legend: {
+                                        align: 'center',
                                         labels: {
+                                            usePointStyle: false,
+                                            boxWidth: 20,
+                                            boxHeight: 2,
+                                            padding: 20,
                                             filter: (item) => {
                                                 // 只显示 mean 的图例
                                                 return !item.text.includes("Rep");
