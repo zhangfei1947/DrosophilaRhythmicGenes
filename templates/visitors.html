@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitor Statistics - Drosophila Rhythmic Genes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: auto;
+            max-width: 1200px;
+            padding: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        .stats-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            flex: 1;
+            min-width: 200px;
+            margin: 10px;
+        }
+        .stat-box h3 {
+            margin-top: 0;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .pagination a, .pagination span {
+            padding: 8px 16px;
+            margin: 0 4px;
+            border: 1px solid #ddd;
+            text-decoration: none;
+            color: #333;
+            border-radius: 4px;
+        }
+        .pagination a:hover {
+            background-color: #f2f2f2;
+        }
+        .pagination .active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        .home-link {
+            display: block;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .home-link a {
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .home-link a:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <h1>Visitor Statistics</h1>
+    
+    <div class="home-link">
+        <a href="/">Back to Gene Search</a>
+    </div>
+    
+    <div class="stats-container">
+        <div class="stat-box">
+            <h3>Total Visits</h3>
+            <p>{{ total_visits }}</p>
+        </div>
+        
+        <div class="stat-box">
+            <h3>Unique IPs</h3>
+            <p>{{ unique_ips }}</p>
+        </div>
+        
+        <div class="stat-box">
+            <h3>Last 24 Hours</h3>
+            <p>{{ recent_visits }} visits</p>
+        </div>
+    </div>
+    
+    <div class="stats-container">
+        <div class="stat-box">
+            <h3>Top Countries</h3>
+            <ul>
+                {% for country, count in countries[:5] %}
+                <li>{{ country }}: {{ count }} visits</li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="stat-box">
+            <h3>Top Searched Genes</h3>
+            <ul>
+                {% for gene, count in top_genes %}
+                <li>{{ gene }}: {{ count }} searches</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    <h2>Recent Visitors</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>IP Address</th>
+                <th>Country</th>
+                <th>Visit Time (UTC)</th>
+                <th>Searched Genes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for visitor in visitors %}
+            <tr>
+                <td>{{ visitor.ip }}</td>
+                <td>{{ visitor.country }}</td>
+                <td>{{ visitor.visit_time.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                <td>{{ visitor.query }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="pagination">
+        {% if pagination.has_prev %}
+            <a href="{{ url_for('visitors', page=pagination.prev_num) }}">&laquo; Previous</a>
+        {% else %}
+            <span class="disabled">&laquo; Previous</span>
+        {% endif %}
+        
+        {% for page_num in pagination.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
+            {% if page_num %}
+                {% if page_num == pagination.page %}
+                    <span class="active">{{ page_num }}</span>
+                {% else %}
+                    <a href="{{ url_for('visitors', page=page_num) }}">{{ page_num }}</a>
+                {% endif %}
+            {% else %}
+                <span>...</span>
+            {% endif %}
+        {% endfor %}
+        
+        {% if pagination.has_next %}
+            <a href="{{ url_for('visitors', page=pagination.next_num) }}">Next &raquo;</a>
+        {% else %}
+            <span class="disabled">Next &raquo;</span>
+        {% endif %}
+    </div>
+    
+    <div class="home-link">
+        <a href="/">Back to Gene Search</a>
+    </div>
+</body>
+</html>

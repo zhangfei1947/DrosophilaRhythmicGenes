@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drosophila Rhythmic Genes</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3"></script>
     <style>
@@ -13,9 +14,10 @@
         }
         h1 {
             text-align: center;
+            color: #333;
         }
         form {
-            margin-top: 20px;
+            margin: 20px 0;
             display: flex;
             gap: 10px;
         }
@@ -23,26 +25,52 @@
             flex: 1;
             padding: 8px;
             font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
         button {
             padding: 8px 16px;
             font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
         }
         .chart-container {
-            margin-top: 40px;
-        }
-        canvas {
-            border: 1px solid #ccc;
-            margin-bottom: 40px;
-        }
-        p.links {
             margin-top: 20px;
         }
-    .chart-container canvas {
-        background-color: white; /* 或者 #fff / #f8f8f8 */
-        border: 1px solid #eaeaea;
-        margin-bottom: 40px;
-    }
+        canvas {
+            background-color: white;
+            border: 1px solid #eaeaea;
+            margin-bottom: 40px;
+            border-radius: 4px;
+        }
+        p.links {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .download-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .download-btn:hover {
+            background-color: #0b7dda;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+            font-style: italic;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -52,59 +80,82 @@
     <form id="searchForm">
         <input type="text" id="geneInput"
                placeholder="Enter gene IDs, separated by comma (up to 100)"
-               value="FBgn0003068">
+               value="FBgn0003068,FBgn0023076,FBgn0014396,FBgn0025680">
         <button type="submit">Search</button>
     </form>
 
     <p class="links">
-        <a href="/download/GeneExpressionData.zip">Download All Data</a>
+        <a href="/download" class="download-btn">Download All Data (ZIP)</a>
     </p>
 
+    <div id="loading" class="loading" style="display: none;">Loading data...</div>
     <div class="chart-container" id="charts"></div>
 
     <script>
         const sampleColors = {
-            "T25LD": "#FFA500",
-            "T18DD": "#0000FF",
-            "T25DD": "#008000",
-            "T29DD": "#FF0000"
+            "T25LD": "#FFA500", // orange
+            "T18DD": "#0000FF", // blue
+            "T25DD": "#008000", // green
+            "T29DD": "#FF0000"  // red
         };
 
         function fetchDataAndDrawCharts(gene_ids) {
-            fetch(`/gene?gene_ids=${encodeURIComponent(gene_ids)}`)
-                .then(res => res.json())
-                .then(data => {
-                    const chartsDiv = document.getElementById("charts");
-                    chartsDiv.innerHTML = "";
+            const loadingDiv = document.getElementById("loading");
+            const chartsDiv = document.getElementById("charts");
+            
+            loadingDiv.style.display = "block";
+            chartsDiv.innerHTML = "";
 
+            fetch(`/gene?gene_ids=${encodeURIComponent(gene_ids)}`)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! Status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    loadingDiv.style.display = "none";
+                    
                     if (!data.length) {
                         chartsDiv.innerHTML = "<p>No data found for the given gene ID(s).</p>";
                         return;
                     }
 
                     data.forEach(gene => {
+                        const chartDiv = document.createElement("div");
+                        chartDiv.style.marginBottom = "40px";
+                        
+                        const title = document.createElement("h3");
+                        title.textContent = `${gene.gene_id} - ${gene.gene_name}`;
+                        title.style.textAlign = "center";
+                        chartDiv.appendChild(title);
+                        
                         const canvas = document.createElement("canvas");
                         canvas.height = 400;
                         canvas.width = 800;
-                        chartsDiv.appendChild(canvas);
+                        chartDiv.appendChild(canvas);
+                        
+                        chartsDiv.appendChild(chartDiv);
 
                         const ctx = canvas.getContext("2d");
-
                         const datasets = [];
 
                         for (const [sample, values] of Object.entries(gene.expression)) {
                             const color = sampleColors[sample];
 
-                            // 浅色区域：rep1 和 rep2（上下填充）
+                            // Rep1 shadow (bottom area)
                             datasets.push({
-                                label: `${sample} Rep1 Shadow`,
+                                label: `${sample} Rep1`,
                                 data: values.time_points.map((t, i) => ({x: t, y: values.rep1[i]})),
                                 borderColor: 'transparent',
                                 backgroundColor: `${color}44`,
                                 pointRadius: 0,
                                 fill: 'origin'
-                            }, {
-                                label: `${sample} Rep2 Shadow`,
+                            });
+                            
+                            // Rep2 shadow (top area)
+                            datasets.push({
+                                label: `${sample} Rep2`,
                                 data: values.time_points.map((t, i) => ({x: t, y: values.rep2[i]})),
                                 borderColor: 'transparent',
                                 backgroundColor: `${color}44`,
@@ -112,9 +163,9 @@
                                 fill: 'end'
                             });
 
-                            // Mean 折线
+                            // Mean line
                             datasets.push({
-                                label: `${sample} Mean Line`,
+                                label: `${sample} Mean`,
                                 data: values.time_points.map((t, i) => ({x: t, y: values.mean[i]})),
                                 borderColor: color,
                                 backgroundColor: 'transparent',
@@ -129,22 +180,12 @@
                             options: {
                                 responsive: false,
                                 plugins: {
-                                    title: {
-                                        display: true,
-                                        text: `${gene.gene_id} - ${gene.gene_name}`
-                                    },
                                     legend: {
                                         display: true,
                                         labels: {
-                                            filter: (item) => !item.text.includes("Shadow")
+                                            filter: (item) => item.text.includes("Mean")
                                         }
-                                    },
-                                    background: {
-                                        color: 'white'
                                     }
-                                },
-                                chartArea: {
-                                    backgroundColor: '#f9f9f9'
                                 },
                                 scales: {
                                     x: {
@@ -162,8 +203,9 @@
                     });
                 })
                 .catch(err => {
+                    loadingDiv.style.display = "none";
                     console.error(err);
-                    alert("Error fetching data.");
+                    chartsDiv.innerHTML = `<p>Error fetching data: ${err.message}</p>`;
                 });
         }
 
@@ -173,7 +215,8 @@
             fetchDataAndDrawCharts(input);
         });
 
-        window.onload = () => fetchDataAndDrawCharts("FBgn0003068");
+        // 页面加载时自动查询默认基因
+        window.onload = () => fetchDataAndDrawCharts("FBgn0003068,FBgn0023076,FBgn0014396,FBgn0025680");
     </script>
 
 </body>

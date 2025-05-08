@@ -2,14 +2,13 @@
 import os
 import pickle
 import json
-from functools import wraps
+import datetime
 from flask import Flask, request, jsonify, render_template, send_from_directory
 import lmdb
 import csv
-
+import requests
 
 app = Flask(__name__)
-app.config.from_envvar('FLASK_ENV_FILE', silent=True)
 
 # --------------------------
 # 加载基因注释
@@ -44,31 +43,35 @@ class Visitor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip = db.Column(db.String(15), nullable=False)
     country = db.Column(db.String(100))
-    visit_time = db.Column(db.DateTime, default=db.func.current_timestamp())
+    visit_time = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    query = db.Column(db.String(500))
 
 @app.before_request
 def track_visitor():
-    ip = request.remote_addr
-    try:
-        res = requests.get(f'https://ipapi.co/{ip}/json/').json()
-        country = res.get('country_name')
-    except:
-        country = None
+    if request.endpoint == 'get_gene_expr':
+        ip = request.remote_addr
+        query = request.args.get('gene_ids', '')
+        
+        try:
+            res = requests.get(f'https://ipapi.co/{ip}/json/', timeout=2).json()
+            country = res.get('country_name', 'Unknown')
+        except:
+            country = 'Unknown'
 
-    visitor = Visitor(ip=ip, country=country)
-    db.session.add(visitor)
-    db.session.commit()
+        visitor = Visitor(ip=ip, country=country, query=query)
+        db.session.add(visitor)
+        db.session.commit()
 
 # --------------------------
 # 请求频率限制
 # --------------------------
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-# 创建 limiter 实例，指定 key_func 为 IP 地址
+
 limiter = Limiter(
     app=app,
-    key_func=get_remote_address,      # 按客户端 IP 做限制
-    default_limits=["200 per day", "100 per hour"]  # 可选全局限制
+    key_func=get_remote_address,
+    default_limits=["200 per day", "10 per minute"]
 )
 
 # --------------------------
@@ -80,8 +83,11 @@ def get_gene_expr():
     gene_ids = request.args.get('gene_ids', '').split(',')
     gene_ids = [g.strip() for g in gene_ids if g.strip()]
 
-    if not gene_ids or len(gene_ids) > 100:
-        return jsonify({"error": "最多支持100个geneID，用逗号分隔"}), 400
+    if not gene_ids:
+        return jsonify({"error": "No gene IDs provided"}), 400
+    
+    if len(gene_ids) > 100:
+        return jsonify({"error": "Maximum 100 gene IDs allowed"}), 400
 
     results = []
 
@@ -119,9 +125,56 @@ def index():
 # --------------------------
 # 文件下载
 # --------------------------
-@app.route('/download/<filename>')
-def download(filename):
-    return send_from_directory("data", filename)
+@app.route('/download')
+def download():
+    return send_from_directory("data", "GeneExpressionData.zip", as_attachment=True)
+
+# --------------------------
+# 访客记录页面
+# --------------------------
+@app.route('/visitors')
+def visitors():
+    page = request.args.get('page', 1, type=int)
+    per_page = 20  # 每页显示20条记录
+    
+    # 获取分页数据
+    pagination = Visitor.query.order_by(Visitor.visit_time.desc()).paginate(
+        page=page, per_page=per_page, error_out=False)
+    visitors_list = pagination.items
+    
+    # 获取统计数据
+    total_visits = Visitor.query.count()
+    unique_ips = db.session.query(Visitor.ip).distinct().count()
+    countries = db.session.query(Visitor.country, db.func.count(Visitor.id)).\
+        group_by(Visitor.country).order_by(db.func.count(Visitor.id).desc()).all()
+    
+    # 获取最近24小时的访问量
+    yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+    recent_visits = Visitor.query.filter(Visitor.visit_time >= yesterday).count()
+    
+    # 获取最常查询的基因
+    top_genes = []
+    if total_visits > 0:
+        gene_counts = {}
+        for visitor in Visitor.query.all():
+            if visitor.query:
+                genes = visitor.query.split(',')
+                for gene in genes:
+                    gene = gene.strip()
+                    if gene:
+                        gene_counts[gene] = gene_counts.get(gene, 0) + 1
+        
+        top_genes = sorted(gene_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+    
+    return render_template('visitors.html', 
+                          visitors=visitors_list,
+                          pagination=pagination,
+                          total_visits=total_visits,
+                          unique_ips=unique_ips,
+                          countries=countries,
+                          recent_visits=recent_visits,
+                          top_genes=top_genes)
+
 
 # --------------------------
 # 初始化数据库
@@ -130,4 +183,4 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)
