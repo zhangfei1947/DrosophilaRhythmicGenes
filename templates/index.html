@@ -78,7 +78,24 @@
             gap: 20px; /* 子项之间的间距 */
             padding: 20px;
             box-sizing: border-box;
-}
+        }
+        /* 打印时的布局 */
+        @media print {
+          .chart-container {
+            display: grid; /* 简单垂直排列 */
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+          }
+          .canvas {
+            page-break-inside: avoid;
+          }
+          .links {
+          display: none;
+          }
+          #searchForm {
+            display: none;
+          }
+        }
     </style>
 </head>
 <body>
@@ -131,6 +148,7 @@
 
                     data.forEach(gene => {
                         const chartDiv = document.createElement("div");
+                        chartDiv.className = "canvas";
                         chartDiv.style.marginBottom = "40px";
                         chartDiv.style.width = "450px";
                         chartDiv.style.height = "300px";
@@ -219,7 +237,7 @@
                                     x: {
                                         type: 'linear',
                                         min: 0,
-                                        max: 48,
+                                        max: 44,
                                         title: { display: true, text: 'Time (hours)' },
                                         ticks: {
                                             stepSize: 4,
