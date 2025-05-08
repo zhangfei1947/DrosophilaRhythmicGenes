@@ -31,6 +31,10 @@ lmdb_envs = {
     for sample in SAMPLES
 }
 
+@app.before_request
+def before_request():
+    request.environ['REMOTE_ADDR'] = request.headers.get('X-Forwarded-For', request.remote_addr)
+
 # --------------------------
 # 访客记录 (SQLite)
 # --------------------------
