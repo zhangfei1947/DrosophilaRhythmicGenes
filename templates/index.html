@@ -210,7 +210,6 @@
 
                             });
                         }
-
                         new Chart(ctx, {
                             type: 'line',
                             data: {
@@ -227,9 +226,30 @@
                                             boxHeight: 2,
                                             padding: 20,
                                             filter: (item) => {
-                                                // 只显示 mean 的图例
+                                                // 只显示 mean 的图例项
                                                 return !item.text.includes("Rep");
                                             }
+                                        },
+                                        onClick: function(event, legendItem, legendController) {
+                                            const chart = legendController.chart;
+                                            const text = legendItem.text; // 如 "T25"
+                                            // 找到该组所有相关数据集（包括 Rep1 和 Rep2）
+                                            const relatedDatasets = chart.data.datasets.filter(ds => {
+                                                return ds.label === text || 
+                                                       ds.label === `${text} Rep1` ||
+                                                       ds.label === `${text} Rep2`;
+                                            });
+                                            
+                                            // 判断当前是否可见
+                                            const isVisible = !(relatedDatasets[0].hidden);
+                                            
+                                            // 设置所有相关数据集为相反状态
+                                            relatedDatasets.forEach(ds => {
+                                                ds.hidden = isVisible;
+                                            });
+                                            console.log(relatedDatasets);
+                                            // 更新图表
+                                            chart.update();
                                         }
                                     }
                                 },
@@ -242,7 +262,7 @@
                                         ticks: {
                                             stepSize: 4,
                                             callback: function(value) {
-                                                return value % 4 === 0 ? value : ''; // 只显示整数倍 4 的数值
+                                                return value % 4 === 0 ? value : '';
                                             }
                                         },
                                         grid: {
@@ -260,6 +280,9 @@
                                 }
                             }
                         });
+
+
+
                     });
                 })
                 .catch(err => {
