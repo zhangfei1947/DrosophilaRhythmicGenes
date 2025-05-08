@@ -137,26 +137,31 @@ def visitors():
     page = request.args.get('page', 1, type=int)
     per_page = 20  # 每页显示20条记录
     
-    # 获取分页数据
-    pagination = Visitor.query.order_by(Visitor.visit_time.desc()).paginate(
-        page=page, per_page=per_page, error_out=False)
+    # 使用新的查询语法
+    stmt = db.select(Visitor).order_by(Visitor.visit_time.desc())
+    pagination = db.paginate(stmt, page=page, per_page=per_page, error_out=False)
     visitors_list = pagination.items
     
     # 获取统计数据
-    total_visits = Visitor.query.count()
-    unique_ips = db.session.query(Visitor.ip).distinct().count()
-    countries = db.session.query(Visitor.country, db.func.count(Visitor.id)).\
-        group_by(Visitor.country).order_by(db.func.count(Visitor.id).desc()).all()
+    total_visits = db.session.scalar(db.select(db.func.count()).select_from(Visitor))
+    unique_ips = db.session.scalar(db.select(db.func.count(db.distinct(Visitor.ip))))
+    
+    # 获取国家统计
+    stmt = db.select(Visitor.country, db.func.count(Visitor.id)).\
+        group_by(Visitor.country).\
+        order_by(db.func.count(Visitor.id).desc())
+    countries = db.session.execute(stmt).all()
     
     # 获取最近24小时的访问量
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
-    recent_visits = Visitor.query.filter(Visitor.visit_time >= yesterday).count()
+    stmt = db.select(db.func.count()).select_from(Visitor).where(Visitor.visit_time >= yesterday)
+    recent_visits = db.session.scalar(stmt)
     
     # 获取最常查询的基因
     top_genes = []
     if total_visits > 0:
         gene_counts = {}
-        for visitor in Visitor.query.all():
+        for visitor in db.session.execute(db.select(Visitor)).scalars():
             if visitor.query:
                 genes = visitor.query.split(',')
                 for gene in genes:
