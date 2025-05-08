@@ -41,7 +41,7 @@
             background-color: #45a049;
         }
         .chart-container {
-            margin-top: 20px;
+            margin: 20px 0;
         }
         canvas {
             background-color: white;
@@ -71,6 +71,14 @@
             font-style: italic;
             color: #666;
         }
+        .chart-container {
+            display: flex;
+            flex-wrap: wrap; /* 允许换行 */
+            justify-content: center; /* 横向居中对齐 */
+            gap: 20px; /* 子项之间的间距 */
+            padding: 20px;
+            box-sizing: border-box;
+}
     </style>
 </head>
 <body>
@@ -124,15 +132,18 @@
                     data.forEach(gene => {
                         const chartDiv = document.createElement("div");
                         chartDiv.style.marginBottom = "40px";
+                        chartDiv.style.width = "450px";
+                        chartDiv.style.height = "300px";
                         
                         const title = document.createElement("h3");
                         title.textContent = `${gene.gene_id} - ${gene.gene_name}`;
                         title.style.textAlign = "center";
+                        title.style.height = "15px";
                         chartDiv.appendChild(title);
                         
                         const canvas = document.createElement("canvas");
-                        canvas.height = 400;
-                        canvas.width = 800;
+                        canvas.height = 300;
+                        canvas.width = 450;
                         chartDiv.appendChild(canvas);
                         
                         chartsDiv.appendChild(chartDiv);
@@ -143,63 +154,78 @@
                         for (const [sample, values] of Object.entries(gene.expression)) {
                             const color = sampleColors[sample];
 
-                            // Rep1 shadow (bottom area)
+                            // Rep1 —— 下边界
                             datasets.push({
                                 label: `${sample} Rep1`,
                                 data: values.time_points.map((t, i) => ({x: t, y: values.rep1[i]})),
                                 borderColor: 'transparent',
                                 backgroundColor: `${color}44`,
                                 pointRadius: 0,
-                                fill: 'origin'
+                                fill: false
                             });
-                            
-                            // Rep2 shadow (top area)
+
+                            // Rep2 —— 上边界，填充到上一个数据集（即 rep1）
                             datasets.push({
                                 label: `${sample} Rep2`,
                                 data: values.time_points.map((t, i) => ({x: t, y: values.rep2[i]})),
                                 borderColor: 'transparent',
                                 backgroundColor: `${color}44`,
                                 pointRadius: 0,
-                                fill: 'end'
+                                fill: '-1' // 填充到前一个数据集
                             });
 
-                            // Mean line
+                            // Mean —— 实线折线
                             datasets.push({
-                                label: `${sample} Mean`,
+                                label: `${sample}`,
                                 data: values.time_points.map((t, i) => ({x: t, y: values.mean[i]})),
                                 borderColor: color,
                                 backgroundColor: 'transparent',
-                                tension: 0.2,
-                                borderWidth: 2
+                                borderWidth: 2,
+                                pointRadius: 3,
+                                pointBorderWidth: 4
                             });
                         }
 
                         new Chart(ctx, {
                             type: 'line',
-                            data: { datasets },
+                            data: {
+                                datasets: datasets
+                            },
                             options: {
                                 responsive: false,
                                 plugins: {
                                     legend: {
-                                        display: true,
                                         labels: {
-                                            filter: (item) => item.text.includes("Mean")
+                                            filter: (item) => {
+                                                // 只显示 mean 的图例
+                                                return !item.text.includes("Rep");
+                                            }
                                         }
                                     }
-                                },
-                                backgroundColor: 'white',  // 设置整个图表背景
-                                layout: {
-                                    padding: 10
                                 },
                                 scales: {
                                     x: {
                                         type: 'linear',
                                         min: 0,
-                                        max: 44,
-                                        title: { display: true, text: 'Time (hours)' }
+                                        max: 48,
+                                        title: { display: true, text: 'Time (hours)' },
+                                        ticks: {
+                                            stepSize: 4,
+                                            callback: function(value) {
+                                                return value % 4 === 0 ? value : ''; // 只显示整数倍 4 的数值
+                                            }
+                                        },
+                                        grid: {
+                                            display: true
+                                        }
                                     },
                                     y: {
                                         title: { display: true, text: 'FPKM' }
+                                    }
+                                },
+                                elements: {
+                                    line: {
+                                        tension: 0
                                     }
                                 }
                             }
