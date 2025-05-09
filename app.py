@@ -69,7 +69,7 @@ def track_visitor():
         # 获取国家（带异常处理）
         country = "Unknown"
         try:
-            res = requests.get(f'https://ipapi.co/{ip}/json/', timeout=3).json()
+            res = requests.get(f'https://ipapi.co/{ip}/json/', timeout=5).json()
             country = res.get('country_name', 'Unknown')
             region = res.get('region', 'Unknown')
         except Exception as e:
