@@ -2,7 +2,7 @@
 import os, re
 import pickle
 import json
-from datetime import datetime
+from datetime
 import pytz
 from flask import Flask, request, jsonify, render_template, send_from_directory
 import lmdb
@@ -38,7 +38,7 @@ lmdb_envs = {
 # --------------------------
 def get_central_time():
     central = pytz.timezone('America/Chicago')  # 中部时间，自动处理夏令时
-    return datetime.now(central)
+    return datetime.datetime.now(central)
 
 from flask_sqlalchemy import SQLAlchemy
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///visitors.db'
