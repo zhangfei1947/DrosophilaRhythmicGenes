@@ -1,8 +1,9 @@
 # app.py
-import os
+import os, re
 import pickle
 import json
 import datetime
+import pytz
 from flask import Flask, request, jsonify, render_template, send_from_directory
 import lmdb
 import csv
@@ -35,6 +36,10 @@ lmdb_envs = {
 # --------------------------
 # 访客记录 (SQLite)
 # --------------------------
+def get_central_time():
+    central = pytz.timezone('America/Chicago')  # 中部时间，自动处理夏令时
+    return datetime.now(central)
+
 from flask_sqlalchemy import SQLAlchemy
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///visitors.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -44,7 +49,8 @@ class Visitor(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ip = db.Column(db.String(15), nullable=False)
     country = db.Column(db.String(100))
-    visit_time = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    region = db.Column(db.String(100))
+    visit_time = db.Column(db.DateTime, default=get_central_time)
     query = db.Column(db.String(500))
 
 @app.before_request
@@ -63,21 +69,22 @@ def track_visitor():
         # 获取国家（带异常处理）
         country = "Unknown"
         try:
-            res = requests.get(f'https://ipapi.co/{ip}/json/', timeout=2).json()
+            res = requests.get(f'https://ipapi.co/{ip}/json/', timeout=3).json()
             country = res.get('country_name', 'Unknown')
+            region = res.get('region', 'Unknown')
         except Exception as e:
             print("Error fetching country:", e)
             country = 'Unknown'
+            region = 'Unknown'
 
         # 存入数据库
         try:
-            visitor = Visitor(ip=ip, country=country, query=query)
+            visitor = Visitor(ip=ip, country=country, region=region, query=query)
             db.session.add(visitor)
             db.session.commit()
         except Exception as e:
             db.session.rollback()
             print("Database error:", e)
-
 
 # --------------------------
 # 请求频率限制
@@ -97,7 +104,8 @@ limiter = Limiter(
 @app.route('/gene')
 @limiter.limit("10 per minute")
 def get_gene_expr():
-    gene_ids = request.args.get('gene_ids', '').split(',')
+    gene_ids = re.sub(r'\s+', '', request.args.get('gene_ids', '')).split(',')
+
     gene_ids = [g.strip() for g in gene_ids if g.strip()]
 
     if not gene_ids:
