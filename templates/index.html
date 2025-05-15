@@ -79,6 +79,10 @@
             padding: 20px;
             box-sizing: border-box;
         }
+        #legendDiv {
+            display: flex;
+            flexWrap: wrap;
+          }
         /* 打印时的布局 */
         @media print {
           .chart-container {
@@ -91,6 +95,9 @@
           }
           .links {
           display: none;
+          }
+          #legendDiv {
+            display: none;
           }
           #searchForm {
             display: none;
@@ -148,71 +155,69 @@
 
                     const fixedSamples = ["T25LD", "T18DD", "T25DD", "T29DD"];
                     if (data.length > 1) {
-            legendDiv = document.createElement('div');
-            legendDiv.className = 'legendDiv';
-            legendDiv.style.marginBottom = "10px";
-            legendDiv.style.width = "600px";
-            legendDiv.style.height = "20px";
-            legendDiv.style.display = "flex";
-            legendDiv.style.flexWrap = "wrap";
-            legendDiv.style.justifyContent = "center";
-            legendDiv.style.alignItems = "center";
-            chartsDiv.appendChild(legendDiv);
-        }
-
-        // 创建固定图例项
-        if (legendDiv) {
-            fixedSamples.forEach(sample => {
-                const item = document.createElement('div');
-                item.style.display = 'flex';
-                item.style.alignItems = 'center';
-                item.style.marginRight = '15px';
-                item.style.cursor = 'pointer';
-
-                const color = sampleColors[sample];
-
-                const box = document.createElement('div');
-                box.style.width = '20px';
-                box.style.height = '4px';
-                box.style.backgroundColor = color;
-                box.style.marginRight = '5px';
-                box.style.borderRadius = '1px';
-
-                const label = document.createElement('span');
-                label.textContent = sample;
-
-                item.appendChild(box);
-                item.appendChild(label);
-
-                // 图例点击：切换所有图表中该样本对应的线
-                item.addEventListener('click', () => {
-                    const isVisible = !item.classList.contains('hidden');
-
-                    Object.values(Chart.instances).forEach(chart => {
-                        chart.data.datasets.forEach(ds => {
-                            if (
-                                ds.label === sample ||
-                                ds.label === `${sample} Rep1` ||
-                                ds.label === `${sample} Rep2`
-                            ) {
-                                ds.hidden = isVisible;
-                            }
-                        });
-                        chart.update();
-                    });
-
-                    if (isVisible) {
-                        item.classList.add('hidden');
-                        box.style.opacity = 0.3;
-                    } else {
-                        item.classList.remove('hidden');
-                        box.style.opacity = 1;
+                        legendDiv = document.createElement('div');
+                        legendDiv.id = 'legendDiv';
+                        legendDiv.style.marginBottom = "10px";
+                        legendDiv.style.width = "600px";
+                        legendDiv.style.height = "20px";
+                        legendDiv.style.justifyContent = "center";
+                        legendDiv.style.alignItems = "center";
+                        chartsDiv.appendChild(legendDiv);
                     }
-                });
 
-                legendDiv.appendChild(item);
-            });
-        }
+                    // 创建固定图例项
+                    if (legendDiv) {
+                        fixedSamples.forEach(sample => {
+                            const item = document.createElement('div');
+                            item.style.display = 'flex';
+                            item.style.alignItems = 'center';
+                            item.style.marginRight = '15px';
+                            item.style.cursor = 'pointer';
+
+                            const color = sampleColors[sample];
+
+                            const box = document.createElement('div');
+                            box.style.width = '20px';
+                            box.style.height = '4px';
+                            box.style.backgroundColor = color;
+                            box.style.marginRight = '5px';
+                            box.style.borderRadius = '1px';
+
+                            const label = document.createElement('span');
+                            label.textContent = sample;
+
+                            item.appendChild(box);
+                            item.appendChild(label);
+
+                            // 图例点击：切换所有图表中该样本对应的线
+                            item.addEventListener('click', () => {
+                                const isVisible = !item.classList.contains('hidden');
+
+                                Object.values(Chart.instances).forEach(chart => {
+                                    chart.data.datasets.forEach(ds => {
+                                        if (
+                                            ds.label === sample ||
+                                            ds.label === `${sample} Rep1` ||
+                                            ds.label === `${sample} Rep2`
+                                        ) {
+                                            ds.hidden = isVisible;
+                                        }
+                                    });
+                                    chart.update();
+                                });
+
+                                if (isVisible) {
+                                    item.classList.add('hidden');
+                                    box.style.opacity = 0.3;
+                                } else {
+                                    item.classList.remove('hidden');
+                                    box.style.opacity = 1;
+                                }
+                            });
+
+                            legendDiv.appendChild(item);
+                        });
+                    }
 
                     data.forEach(gene => {
                         const chartDiv = document.createElement("div");
